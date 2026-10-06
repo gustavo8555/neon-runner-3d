@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#04060f">
+<title>NEON RUNNER 3D</title>
+<style>
+  :root{
+    --cyan:#37f4ff;
+    --magenta:#ff2fa0;
+    --amber:#ffab3d;
+    --violet:#8b5cff;
+    --ink:#04060f;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{
+    width:100%; height:100%; overflow:hidden; background:var(--ink);
+    font-family:'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color:#eaf6ff; -webkit-tap-highlight-color:transparent;
+    user-select:none;
+  }
+  #game{ position:fixed; inset:0; width:100%; height:100%; display:block; }
+
+  /* ---------- FLASH ---------- */
+  #flash{
+    position:fixed; inset:0; pointer-events:none; opacity:0;
+    transition:opacity .18s linear; z-index:6; mix-blend-mode:screen;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed; inset:0; pointer-events:none; z-index:5; display:none;
+    padding:18px clamp(14px,3vw,38px);
+  }
+  .mono{ font-family:'Consolas','SF Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+
+  .hud-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .score-wrap{ display:flex; flex-direction:column; gap:2px; }
+  .label{
+    font-size:10px; letter-spacing:.32em; text-transform:uppercase;
+    color:#5f7796; font-weight:700;
+  }
+  #score{
+    font-size:clamp(30px,5.6vw,54px); font-weight:800; line-height:.95;
+    color:#fff; text-shadow:0 0 14px rgba(55,244,255,.75), 0 0 42px rgba(55,244,255,.35);
+  }
+  #best{ font-size:11px; letter-spacing:.18em; color:#4d6a8c; font-weight:700; }
+
+  .hud-btns{ display:flex; gap:8px; pointer-events:auto; }
+  .ibtn{
+    width:42px; height:42px; border-radius:12px; cursor:pointer;
+    background:rgba(10,20,38,.62); border:1px solid rgba(55,244,255,.28);
+    color:#bfe9ff; font-size:17px; display:grid; place-items:center;
+    backdrop-filter:blur(8px); transition:.16s;
+  }
+  .ibtn:hover{ background:rgba(55,244,255,.16); border-color:var(--cyan); transform:translateY(-1px); }
+  .ibtn:active{ transform:scale(.94); }
+
+  .hud-mid{
+    position:absolute; top:18px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:22px; text-align:center;
+  }
+  .stat{ display:flex; flex-direction:column; gap:1px; }
+  .stat b{ font-size:clamp(15px,2.2vw,21px); font-weight:700; color:#cfefff; }
+  #combo{
+    color:var(--amber); font-weight:800; font-size:clamp(15px,2.3vw,22px);
+    text-shadow:0 0 16px rgba(255,171,61,.8); min-width:34px; text-align:left;
+  }
+
+  .hud-bottom{
+    position:absolute; left:0; right:0; bottom:0;
+    padding:0 clamp(14px,3vw,38px) 22px;
+    display:flex; align-items:flex-end; justify-content:space-between; gap:18px;
+  }
+  #shells{ display:flex; gap:8px; }
+  #shells i{
+    width:20px; height:20px; display:block;
+    transform:rotate(45deg); border-radius:4px;
+    border:2px solid rgba(255,47,160,.35); background:rgba(255,47,160,.07);
+    transition:.22s;
+  }
+  #shells i.on{
+    background:linear-gradient(135deg,#ff2fa0,#ff7ac6);
+    border-color:#ff8ecb; box-shadow:0 0 16px rgba(255,47,160,.85);
+  }
+
+  .energy{ width:min(300px,42vw); }
+  .energy .label{ margin-bottom:6px; display:block; }
+  .bar{
+    height:12px; border-radius:99px; overflow:hidden;
+    background:rgba(10,22,40,.75); border:1px solid rgba(55,244,255,.24);
+    box-shadow:inset 0 0 12px rgba(0,0,0,.6);
+  }
+  #energy-fill{
+    height:100%; width:0%; border-radius:99px; transition:width .12s linear;
+    background:linear-gradient(90deg,#1d7fff,#37f4ff);
+    box-shadow:0 0 14px rgba(55,244,255,.7);
+  }
+  #energy-fill.full{
+    background:linear-gradient(90deg,#37f4ff,#7dffdd,#ffd166);
+    box-shadow:0 0 22px rgba(125,255,221,.95);
+    animation:pulseBar .7s ease-in-out infinite alternate;
+  }
+  @keyframes pulseBar{ from{filter:brightness(1)} to{filter:brightness(1.5)} }
+
+  /* ---------- BOTAO TURBO ---------- */
+  #btn-turbo{
+    position:fixed; right:24px; bottom:96px; z-index:7; display:none;
+    width:88px; height:88px; border-radius:50%;
+    align-items:center; justify-content:center; flex-direction:column;
+    background:radial-gradient(circle at 35% 30%,rgba(55,244,255,.35),rgba(10,20,40,.85));
+    border:2px solid rgba(55,244,255,.6); color:#eaffff;
+    font-size:11px; font-weight:800; letter-spacing:.16em;
+    box-shadow:0 0 26px rgba(55,244,255,.4);
+  }
+  #btn-turbo:active{ transform:scale(.93); }
+
+  /* ---------- OVERLAYS ---------- */
+  .screen{
+    position:fixed; inset:0; z-index:9; display:none;
+    align-items:center; justify-content:center; padding:24px;
+    background:radial-gradient(ellipse at 50% 40%,rgba(8,16,36,.55) 0%,rgba(3,5,12,.9) 75%);
+    backdrop-filter:blur(4px);
+    animation:fade .28s ease;
+  }
+  @keyframes fade{ from{opacity:0} to{opacity:1} }
+  .card{
+    width:min(660px,100%); text-align:center;
+    padding:clamp(24px,4vw,44px); border-radius:24px;
+    background:linear-gradient(160deg,rgba(14,24,48,.9),rgba(8,12,26,.94));
+    border:1px solid rgba(55,244,255,.22);
+    box-shadow:0 0 0 1px rgba(255,47,160,.06) inset, 0 30px 90px rgba(0,0,0,.7);
+  }
+  .kicker{
+    font-size:11px; letter-spacing:.5em; text-transform:uppercase;
+    color:var(--magenta); font-weight:800; margin-bottom:14px;
+  }
+  h1{
+    font-size:clamp(38px,8.6vw,80px); font-weight:900; line-height:.92;
+    letter-spacing:-.02em; margin-bottom:10px;
+    background:linear-gradient(100deg,#37f4ff 10%,#a8f7ff 35%,#ff2fa0 75%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 22px rgba(55,244,255,.45));
+  }
+  h2{
+    font-size:clamp(26px,5.4vw,44px); font-weight:900; letter-spacing:-.01em;
+    margin-bottom:8px; color:#fff;
+    text-shadow:0 0 22px rgba(55,244,255,.55);
+  }
+  h2.danger{ color:#ff74ae; text-shadow:0 0 26px rgba(255,47,160,.7); }
+  .sub{ color:#8ba6c4; font-size:14px; line-height:1.65; margin-bottom:24px; }
+
+  .keys{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+    gap:10px; margin:26px 0 30px; text-align:left;
+  }
+  .key{
+    background:rgba(8,16,34,.7); border:1px solid rgba(55,244,255,.14);
+    border-radius:14px; padding:12px 14px;
+  }
+  .key span{
+    display:block; font-size:10px; letter-spacing:.2em; color:#5f7796;
+    font-weight:800; text-transform:uppercase; margin-bottom:6px;
+  }
+  .key b{ font-size:13px; color:#d5efff; font-weight:700; }
+  kbd{
+    display:inline-block; min-width:22px; padding:2px 7px; margin-right:3px;
+    border-radius:6px; background:rgba(55,244,255,.12);
+    border:1px solid rgba(55,244,255,.3); border-bottom-width:2px;
+    font-family:inherit; font-size:11px; font-weight:800; color:#bff4ff;
+  }
+
+  .btn{
+    cursor:pointer; border:none; border-radius:14px;
+    padding:16px 42px; font-size:15px; font-weight:900;
+    letter-spacing:.14em; text-transform:uppercase; color:#02121a;
+    background:linear-gradient(100deg,#37f4ff,#7dffdd);
+    box-shadow:0 0 30px rgba(55,244,255,.45), 0 8px 26px rgba(0,0,0,.5);
+    transition:.16s; font-family:inherit;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 0 44px rgba(55,244,255,.7), 0 12px 30px rgba(0,0,0,.5); }
+  .btn:active{ transform:translateY(0) scale(.98); }
+  .btn.ghost{
+    background:transparent; color:#9dc6e6;
+    border:1px solid rgba(55,244,255,.28); box-shadow:none;
+    padding:14px 30px; font-size:13px;
+  }
+  .btn.ghost:hover{ color:#eafcff; border-color:var(--cyan); box-shadow:0 0 24px rgba(55,244,255,.28); }
+  .row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+
+  .final{ margin:8px 0 6px; }
+  .final .big{
+    font-size:clamp(46px,11vw,92px); font-weight:900; line-height:1;
+    color:#fff; text-shadow:0 0 26px rgba(55,244,255,.8), 0 0 70px rgba(55,244,255,.35);
+  }
+  .final .lbl{ font-size:11px; letter-spacing:.4em; color:#5f7796; font-weight:800; }
+  #final-stats{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin:18px 0 26px;
+  }
+  #final-stats span{
+    font-size:12px; font-weight:700; color:#a8c8e4;
+    background:rgba(8,18,38,.8); border:1px solid rgba(55,244,255,.16);
+    padding:9px 16px; border-radius:99px;
+  }
+  #new-record{
+    display:none; margin:6px 0 4px; font-size:13px; font-weight:900;
+    letter-spacing:.24em; color:var(--amber);
+    text-shadow:0 0 18px rgba(255,171,61,.8);
+    animation:blink 1s ease-in-out infinite alternate;
+  }
+  @keyframes blink{ from{opacity:.45} to{opacity:1} }
+
+  .badge{
+    display:inline-block; margin-bottom:20px; padding:5px 14px; border-radius:99px;
+    font-size:10px; letter-spacing:.28em; font-weight:800; color:var(--cyan);
+    border:1px solid rgba(55,244,255,.3); background:rgba(55,244,255,.06);
+  }
+
+  /* ---------- FALLBACK ---------- */
+  #fallback{
+    position:fixed; inset:0; z-index:20; display:none;
+    align-items:center; justify-content:center; padding:24px; text-align:center;
+  }
+  .fb-title{ font-size:24px; font-weight:800; margin-bottom:10px; color:#ff74ae; }
+  .fb-text{ color:#8ba6c4; font-size:14px; line-height:1.7; max-width:440px; }
+
+  @media (max-width:520px){
+    .hud-mid{ display:none; }
+    .keys{ grid-template-columns:1fr 1fr; }
+    #btn-turbo{ right:18px; bottom:110px; width:78px; height:78px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="flash"></div>
+
+<!-- ================= HUD ================= -->
+<div id="hud">
+  <div class="hud-top">
+    <div class="score-wrap">
+      <div class="label">Pontuacao</div>
+      <div id="score" class="mono">0</div>
+      <div id="best">RECORDE 0</div>
+    </div>
+    <div class="hud-btns">
+      <div class="ibtn" id="btn-mute" title="Som (M)">&#128266;</div>
+      <div class="ibtn" id="btn-pause" title="Pausar (P)">&#10073;&#10073;</div>
+    </div>
+  </div>
+
+  <div class="hud-mid">
+    <div class="stat"><span class="label">Distancia</span><b id="dist" class="mono">0 m</b></div>
+    <div class="stat"><span class="label">Combo</span><b id="combo" class="mono"></b></div>
+    <div class="stat"><span class="label">Velocidade</span><b id="spd" class="mono">0 km/h</b></div>
+  </div>
+
+  <div class="hud-bottom">
+    <div>
+      <div class="label" style="margin-bottom:8px">Escudos</div>
+      <div id="shells"></div>
+    </div>
+    <div class="energy">
+      <span class="label">Nucleos <b id="orbs" class="mono">0</b> &nbsp;/&nbsp; Turbo</span>
+      <div class="bar"><div id="energy-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="btn-turbo">TURBO</div>
+
+<!-- ================= MENU ================= -->
+<div class="screen" id="screen-menu">
+  <div class="card">
+    <div class="badge">WEBGL 3D &nbsp;&middot;&nbsp; SEM DOWNLOADS</div>
+    <h1>NEON<br>RUNNER 3D</h1>
+    <p class="sub">
+      Corra por uma pista infinita de neon. Desvie das barreiras, colete nucleos
+      de energia e libere o turbo para multiplicar a pontuacao.
+    </p>
+
+    <div class="keys">
+      <div class="key"><span>Trocar de pista</span><b><kbd>A</kbd><kbd>D</kbd> ou <kbd>&larr;</kbd><kbd>&rarr;</kbd></b></div>
+      <div class="key"><span>Pular</span><b><kbd>W</kbd> <kbd>&uarr;</kbd> <kbd>Espaco</kbd></b></div>
+      <div class="key"><span>Escorregar</span><b><kbd>S</kbd> <kbd>&darr;</kbd></b></div>
+      <div class="key"><span>Turbo (100%)</span><b><kbd>Shift</kbd> ou <kbd>E</kbd></b></div>
+      <div class="key"><span>Pausar / Som</span><b><kbd>P</kbd> &nbsp; <kbd>M</kbd></b></div>
+      <div class="key"><span>Toque</span><b>Arraste para os lados / toque = pular</b></div>
+    </div>
+
+    <button class="btn" id="btn-play">Jogar</button>
+    <p class="sub" style="margin:16px 0 0; font-size:12px">
+      Dica: barreira <b style="color:#ffab3d">laranja</b> = pule &nbsp;&middot;&nbsp;
+      <b style="color:#ff2fa0">rosa</b> = escorregue &nbsp;&middot;&nbsp;
+      <b style="color:#a88bff">roxa</b> = desvie de lado
+    </p>
+  </div>
+</div>
+
+<!-- ================= PAUSE ================= -->
+<div class="screen" id="screen-pause">
+  <div class="card">
+    <h2>Pausado</h2>
+    <p class="sub">Respire fundo. A pista espera por voce.</p>
+    <div class="row">
+      <button class="btn" id="btn-resume">Continuar</button>
+      <button class="btn ghost" id="btn-restart">Reiniciar</button>
+      <button class="btn ghost" id="btn-quit">Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= GAME OVER ================= -->
+<div class="screen" id="screen-over">
+  <div class="card">
+    <div class="kicker">Fim de jogo</div>
+    <div class="final">
+      <div class="lbl">Pontuacao final</div>
+      <div class="big mono" id="final-score">0</div>
+    </div>
+    <div id="new-record">&#9733; NOVO RECORDE &#9733;</div>
+    <div id="final-stats"></div>
+    <div class="row">
+      <button class="btn" id="btn-again">Jogar de novo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FALLBACK ================= -->
+<div id="fallback">
+  <div>
+    <div class="fb-title">WebGL indisponivel</div>
+    <div class="fb-text">
+      Este jogo precisa de WebGL. Atualize o navegador ou ative a aceleracao
+      de hardware nas configuracoes.
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
