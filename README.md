@@ -1,5 +1,7 @@
 # NEON RUNNER 3D
 
+**▶ Jogue agora: <https://gustavo8555.github.io/neon-runner-3d/>**
+
 Corredor infinito em 3D rodando direto no navegador — **WebGL puro, sem bibliotecas,
 sem CDN e sem assets externos**. Funciona offline, basta abrir o `index.html`.
 
@@ -51,3 +53,27 @@ Testado com WebGL real (Chrome headless) e com o loop de jogo completo simulado
 em Node, sem erros.
 
 ![Prévia](preview.png)
+
+## Publicar / atualizar no GitHub Pages
+
+O jogo e 100% estatico (nenhum build necessario). O Pages serve a raiz do
+repositorio em `main`.
+
+Atualizou o jogo? Basta rodar:
+
+```powershell
+.\publicar.ps1
+```
+
+Ele commita o que mudou, aponta o remote e faz o push. O Pages re-publica sozinho
+em cerca de um minuto.
+
+### Primeira publicacao (uma vez so)
+
+1. Crie um repositorio **vazio** e **publico** em <https://github.com/new>
+   com o nome `neon-runner-3d` (sem README, sem .gitignore).
+2. Rode ` .\publicar.ps1 `.
+3. Em **Settings → Pages**, escolha *Source: Deploy from a branch*,
+   branch `main`, pasta `/ (root)` e salve.
+
+O jogo fica em <https://gustavo8555.github.io/neon-runner-3d/>.
