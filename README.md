@@ -2,6 +2,8 @@
 
 **▶ Jogue agora: <https://gustavo8555.github.io/neon-runner-3d/>**
 
+![Menu do jogo](preview-menu.png)
+
 Corredor infinito em 3D rodando direto no navegador — **WebGL puro, sem bibliotecas,
 sem CDN e sem assets externos**. Funciona offline, basta abrir o `index.html`.
 
