@@ -1467,6 +1467,9 @@
       ui.best.textContent = 'RECORDE ' + G.best.toLocaleString('pt-BR');
     };
     ui.best.textContent = 'RECORDE ' + G.best.toLocaleString('pt-BR');
+
+    // a tela inicial precisa aparecer ja no primeiro carregamento
+    ui.menu.style.display = 'flex';
   }
 
   var lastHud = {};
